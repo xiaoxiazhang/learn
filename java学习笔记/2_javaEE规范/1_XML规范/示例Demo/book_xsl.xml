@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="simple.xsl"?>
+<!--注释-->
+<books>
+	<book>
+		<name>JAVA自学手册</name>
+		<publisher>人民邮电出版社</publisher>
+		<company>网新恒天</company>
+		<author>张小侠</author>
+		<ISBN>9787115201027</ISBN>
+		<price unit="RMB">59.80</price>
+		<url><![CDATA[http://www.mingribook.com/bookinfo.php?id=208&sid=11]]></url>
+	</book>
+</books>

@@ -1,0 +1,19 @@
+#!/bin/bash
+#测试yum源
+yum list memcached  &>/dev/null
+  if [ $? -ne 0 ] ;then
+    echo "there is an error to connect to Yum repository!"
+	exit
+  fi
+#安装memcached  
+yum install memcached -y  &>/dev/null 
+  if [ $? -ne 0 ] ;then
+    echo "---安装memcached失败---"
+    exit
+  fi
+echo "---安装memcached成功---"
+
+#启动memcached
+echo "---启动memcached ---"
+memcached -d -u root -m 1024
+

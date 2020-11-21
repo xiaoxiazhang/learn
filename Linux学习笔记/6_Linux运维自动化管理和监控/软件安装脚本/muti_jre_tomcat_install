@@ -1,0 +1,17 @@
+#!/bin/bash
+PAC_DIR=/usr/local/src
+HOSTS_DIR=/usr/local/hosts
+SHELL_DIR=/usr/local/shell
+#复制tomcat,jre文件到服务器对应服务器上
+pscp -h $HOSTS_DIR/test.host $PAC_DIR/{jre*,apache-tomcat*} $PAC_DIR
+if [ $? -ne 0 ] ;then
+echo "there is an error to upload package!"
+exit
+ fi
+echo "--- upload package success---!"
+#安装jre
+mussh -H $HOSTS_DIR/test.host -m -C $SHELL_DIR/jre_install
+
+#安装tomcat
+mussh -H $HOSTS_DIR/test.host -m -C $SHELL_DIR/tomcat_install
+

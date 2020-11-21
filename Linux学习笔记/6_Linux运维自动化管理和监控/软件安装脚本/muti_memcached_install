@@ -1,0 +1,5 @@
+#!/bin/bash
+HOSTS_DIR=/usr/local/hosts
+SHELL_DIR=/usr/local/shell
+mussh -H $HOSTS_DIR/test.host -m -C $SHELL_DIR/memcached_install
+

@@ -1,0 +1,60 @@
+#!/bin/bash
+PAC_DIR=/usr/local/src
+mongodb_name=$(ls $PAC_DIR | grep mongodb*)
+mongodb_dir=/usr/local/mongodb
+#解压mongodb
+rm –rf /usr/local/mongo*
+tar -zxvf $PAC_DIR/$mongodb_name -C /usr/local
+mv /usr/local/mongodb* $mongodb_dir
+
+#创建数据库目录，日志目录
+mkdir -p /mongodb/mongodb_db
+mkdir -p /mongodb/mongodb_logs
+
+#修改内核，处理mongodb3.0警告信息
+echo "never" > /sys/kernel/mm/transparent_hugepage/enabled
+echo "never" > /sys/kernel/mm/transparent_hugepage/defrag
+
+
+#创建配置文件
+touch /usr/local/mongodb/mongodb.conf
+cat >> $mongodb_dir/mongodb.conf <<EOF
+  port=27017 #端口号
+  dbpath=/mongodb/mongodb_db #数据库路径
+  logpath=/mongodb/mongodb_logs/mongodb.log #日志输出文件路径
+  fork=true #设置后台运行
+  logappend=true #日志输出方式
+  maxConns=10000 
+EOF
+
+#设置开机启动
+touch /etc/rc.d/init.d/mongod
+cat > /etc/rc.d/init.d/mongod <<EOF
+  #!/bin/sh
+  # chkconfig: - 64 36
+  # description:mongod
+  case \$1 in
+  start)
+  $mongodb_dir/bin/mongod  --config $mongodb_dir/mongodb.conf
+  ;;
+  stop)
+  $mongodb_dir/bin/mongo 127.0.0.1:27017/admin --eval "db.shutdownServer()"
+  ;;
+  status)
+  $mongodb_dir/bin/mongo 127.0.0.1:27017/admin --eval "db.stats()"
+  ;;
+  esac 
+EOF
+chmod +x /etc/rc.d/init.d/mongod
+chkconfig --add mongod
+chkconfig mongod on 
+
+#添加环境变量
+cat >> /etc/profile <<EOF
+export PATH=\$PATH:$mongodb_dir/bin
+EOF
+source /etc/profile
+
+#启动服务
+service  mongod  start
+

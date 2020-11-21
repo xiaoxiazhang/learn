@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE books SYSTEM "simple.dtd">
+<!--<!DOCTYPE books[
+<!ELEMENT books (book+)>
+<!ELEMENT book (name,publisher,company,author,ISBN,price,url)>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT publisher (#PCDATA)>
+<!ELEMENT company (#PCDATA)>
+<!ELEMENT author (#PCDATA)>
+<!ELEMENT ISBN (#PCDATA)>
+<!ELEMENT price (#PCDATA)>
+<!ELEMENT url (#PCDATA)>
+]>
+-->
+
+<books>
+	<book>
+		<name>JAVA自学手册</name>
+		<publisher>人民邮电出版社</publisher>
+		<company>网新恒天</company>
+		<author>张小侠</author>
+		<ISBN>9787115201027</ISBN>
+		<price unit="RMB">59.80</price>
+		<url><![CDATA[http://www.mingribook.com/bookinfo.php?id=208&sid=11]]></url>
+	</book>
+</books>
+
+

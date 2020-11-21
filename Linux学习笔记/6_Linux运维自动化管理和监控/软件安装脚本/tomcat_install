@@ -1,0 +1,84 @@
+#!/bin/bash
+PAC_DIR=/usr/local/src
+tomcat_dir=/usr/local/tomcat7
+tomcat_name=$(ls $PAC_DIR | grep apache-tomcat)
+if [ -z $tomcat_name ] ;then
+  echo '---没有tomcat包，安装失败---'
+  exit
+else
+  rm -rf /usr/local/tomcat*
+  tar -zxvf $PAC_DIR/$tomcat_name -C /usr/local &>/dev/null
+  mv /usr/local/apache-tomcat* $tomcat_dir
+fi
+
+#修改tomcat的配置文件conf/server.xml
+cp -f $tomcat_dir/conf/server.xml $tomcat_dir/conf/server.xml.bak
+cat > $tomcat_dir/conf/server.xml  <<EOF
+<?xml version='1.0' encoding='utf-8'?>
+<Server port="8005" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <Listener className="org.apache.catalina.core.JasperListener" />
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+  <GlobalNamingResources>
+    <Resource name="UserDatabase" auth="Container"
+              type="org.apache.catalina.UserDatabase"
+              description="User database that can be updated and saved"
+              factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+              pathname="conf/tomcat-users.xml" />
+  </GlobalNamingResources>
+  <Service name="Catalina">	
+    <Connector port="8080" protocol="HTTP/1.1"
+           URIEncoding="UTF-8"  
+           minSpareThreads="25" 
+           maxSpareThreads="75"
+           enableLookups="false" 
+           disableUploadTimeout="true" 
+           connectionTimeout="100000"
+           acceptCount="400"   
+           maxThreads="800" 
+           maxProcessors="1000" 
+           minProcessors="5"
+           useURIValidationHack="false"
+           compression="on" 
+           compressionMinSize="2048"
+           compressableMimeType="text/html,text/xml,text/javascript,text/css,text/plain"
+           redirectPort="8443"/>
+    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+    <Engine name="Catalina" defaultHost="localhost">
+      <Realm className="org.apache.catalina.realm.LockOutRealm">
+        <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+               resourceName="UserDatabase"/>
+      </Realm>
+      <Host name="localhost"  appBase="webapps"
+            unpackWARs="true" autoDeploy="true">
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log." suffix=".txt"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+    </Engine>
+  </Service>
+</Server>
+EOF
+
+#修改配置bin/catalina.sh
+sed -i '/OS specific support/a JAVA_OPTS="-Xms1536m -Xmx1536m -Xmn1g -Xss256k -XX:+UseConcMarkSweepGC"' $tomcat_dir/bin/catalina.sh
+
+#修改配置tomcat-users.xml
+cp -f $tomcat_dir/conf/tomcat-users.xml $tomcat_dir/conf/tomcat-users.xml.bak
+cat > $tomcat_dir/conf/tomcat-users.xml <<EOF
+<?xml version='1.0' encoding='utf-8'?>
+<tomcat-users>
+    <role rolename="manager-gui"/>
+    <role rolename="manager-jmx"/>
+    <role rolename="manager-script"/>
+    <user username="tomcat" password="p@\$\$w0rd" roles="manager-gui,manager-script,manager-script"/>
+</tomcat-users>  
+EOF
+
+#启动tomcat
+echo "---启动tomcat---"
+fuser -k 8080/tcp
+$tomcat_dir/bin/startup.sh

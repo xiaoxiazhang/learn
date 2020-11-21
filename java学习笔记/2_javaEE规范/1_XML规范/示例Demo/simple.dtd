@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE books[
+<!ELEMENT books (book+)>
+<!ELEMENT book (name,publisher,company,author,ISBN,price,url)>
+<!ELEMENT name (#PCDATA)>
+<!ELEMENT publisher (#PCDATA)>
+<!ELEMENT company (#PCDATA)>
+<!ELEMENT author (#PCDATA)>
+<!ELEMENT ISBN (#PCDATA)>
+<!ELEMENT price (#PCDATA)>
+<!ELEMENT url (#PCDATA)>
+<!ENTITY info "提示信息">
+]>

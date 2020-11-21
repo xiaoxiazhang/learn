@@ -1,0 +1,19 @@
+#!/bin/bash
+PAC_DIR=/usr/local/src
+HOSTS_DIR=/usr/local/hosts
+jre_name=$(ls $PAC_DIR | grep jre)
+#安装java JRE
+if [ -z $jre_name ] ;then
+  echo "---没有jre相关的包，安装失败---"
+  exit
+else
+  rpm -ivh $PAC_DIR/$jre_name &>/dev/null
+  jre_version=$(rpm -qa | grep jre | cut -d - -f 1)
+  cat >> /etc/profile <<EOF
+  export JAVA_HOME=/usr/java/$jre_version
+  export PATH=\$JAVA_HOME/bin:\$PATH
+  export CLASSPATH=.:\$JAVA_HOME/lib/dt.jar:\$JAVA_HOME/lib/tools.jar
+EOF
+source /etc/profile
+  echo "---安装jre成功---"
+fi 

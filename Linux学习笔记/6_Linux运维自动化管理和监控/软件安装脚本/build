@@ -1,0 +1,13 @@
+#!/bin/bash
+HOST_DIR=/etc/pssh/hosts
+#rm -rf ~/.ssh/id_rsa
+#ssh-keygen  -t rsa -P '' -f ~/.ssh/id_rsa >/dev/null
+for i in `awk '{print $1}' $HOST_DIR`
+  do
+    j=`awk -v I="$i" '{if(I==$1)print $2}' $HOST_DIR`
+    k=`awk -v I="$i" '{if(I==$1)print $3}' $HOST_DIR`
+    # expect uploadPub $i $j $k
+    # expect editKey $i $j $k
+    expect uploadKey $i $j $k
+  done
+
