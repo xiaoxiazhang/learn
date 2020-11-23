@@ -484,7 +484,34 @@ Redis内置了对LUA脚本的支持，并且在计算过程中保证了脚本中
 
 
 
-#### (六). Redisson分布式锁配置和使用
+#### (六). Redisson分布式锁使用
+
+Redis官方文档：https://github.com/redisson/redisson/wiki
+
+##### maven依赖
+
+```xml
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson</artifactId>
+    <version>${redisson.version}</version>
+</dependency>
+```
+
+
+
+##### Redisson配置
+
+```java
+
+
+```
+
+
+
+
+
+##### Redisson使用
 
 
 

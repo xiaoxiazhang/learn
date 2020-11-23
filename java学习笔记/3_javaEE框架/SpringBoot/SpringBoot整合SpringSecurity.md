@@ -203,24 +203,70 @@ SecurityFilterAutoConfiguration自动配置类：
 
 
 
-
-
 #### (三). SpringSecurity 方法授权流程
 
+##### 内置表达式使用
+
+* hasRole(String role)：  返回`true`当前委托人是否具有指定角色。
+* hasAnyRole(String… roles)：返回`true`当前委托人是否具有提供的任何角色（以逗号分隔的字符串列表形式）。
+* hasAuthority(String authority)：如果当前主体具有指定的权限，则返回true
+* hasAnyAuthority(String… authorities)： 返回`true`当前委托人是否具有任何提供的授权（以逗号分隔的字符串列表形式）
+* principal： 允许直接访问代表当前用户的主体对象
+* authentication：允许直接访问`Authentication`从`SecurityContext`
+* permitAll：总可以访问
+* denyAll：总不可以访问
+* isAnonymous()：返回`true`当前委托人是否为匿名用户
+* isAuthenticated()：如果用户不是匿名的，则返回true
 
 
-##### 授权原理
+
+##### 方法安全性表达式
+
+```java
+// 1.开启注解功能
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    // ...
+}
 
 
+// 2.方法使用
+@RestController
+@Api("权限菜单管理模块")
+@RequestMapping("permission")
+public class PermissionController {
+   
+    @ApiOperation("更新权限项")
+    @PreAuthorize("hasAuthority('permission@update')")
+    @RequestMapping(value = "/update", method = RequestMethod.POST)
+    public APIResult<String> updatePermission(@RequestBody PermissionUpdateRequest request) {
 
+        return APIResult.success();
+    }
+}
 
+// 3.原理说明：注入GlobalMethodSecuritySelector ==> GlobalMethodSecurityAspectJAutoProxyRegistrar
+// GlobalMethodSecurityAspectJAutoProxyRegistrar会创建方法拦截处理器：MethodSecurityInterceptor，用于拦截认证请求
+class MethodSecurityInterceptor {
+    public Object invoke(MethodInvocation mi) throws Throwable {
+		
+        // 前置拦截
+        InterceptorStatusToken token = super.beforeInvocation(mi);
+		    Object result;
+		    try {
+          // 目标方法执行
+			    result = mi.proceed();
+		    }
+		    finally {
+			    super.finallyInvocation(token);
+		    } 
+    
+        // 后置拦截
+		    return super.afterInvocation(token, result);
+	    }
+}
 
-
-
-
-
-
-
+```
 
 
 
