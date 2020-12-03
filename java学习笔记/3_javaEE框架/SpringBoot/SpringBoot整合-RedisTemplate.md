@@ -503,17 +503,34 @@ Redis官方文档：https://github.com/redisson/redisson/wiki
 ##### Redisson配置
 
 ```java
-
+@Bean(destroyMethod = "shutdown")
+public Redisson redissonClient(RedisProperties redisProperties) {
+    Config config = new Config();
+    String address = "redis://" + redisProperties.getHost() + ":" + redisProperties.getPort();
+    config.useSingleServer()
+            .setAddress(address)
+            .setPassword(redisProperties.getPassword());
+    return (Redisson) Redisson.create(config);
+}
 
 ```
 
 
 
-
-
 ##### Redisson使用
 
+```java
+try {
+    lock.lock(20, TimeUnit.SECONDS);
+    // 原子操作逻辑
 
+} finally {
+    if(lock.isLocked() && lock.isHeldByCurrentThread()){
+        lock.unlock();
+    }
+}
+
+```
 
 
 
@@ -529,15 +546,15 @@ Redis官方文档：https://github.com/redisson/redisson/wiki
 
 CacheA
 
-##### 
-
-##### 缓存穿透
-
-缓存穿透说：是大量请求的 key 根本不存在于缓存中，导致请求直接到了数据库上，根本没有经过缓存这一层。
 
 
 
-##### 缓存雪崩
+
+##### 缓存问题处理
+
+
+
+缓存穿透：是大量请求的 key 根本不存在于缓存中，导致请求直接到了数据库上，根本没有经过缓存这一层。
 
 缓存雪崩：缓存在同一时间大面积失效，后面的请求都直接落到了数据库上，造成数据库短时间内承受大量请求。
 

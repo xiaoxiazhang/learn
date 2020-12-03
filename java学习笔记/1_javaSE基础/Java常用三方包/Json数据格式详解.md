@@ -26,7 +26,6 @@ JSON 值可以是：
 #### 2. FastJson
 
 ```xml
-<!-- https://mvnrepository.com/artifact/com.alibaba/fastjson -->
 <dependency>
     <groupId>com.alibaba</groupId>
     <artifactId>fastjson</artifactId>
