@@ -16,7 +16,7 @@
 
 **程序**：是含有指令和数据的文件，被存储在磁盘或其他的数据存储设备中，也就是说程序是静态的代码。
 
-**进程：**程序的一次执行过程，是系统运行程序的基本单位，因此进程是动态的。系统运行一个程序即是一个进程从创建，运行到消亡的过程。
+**进程：**是程序的一次执行过程，系统运行程序的基本单位，因此进程是动态的。系统运行程序即是一个进程从创建，运行到消亡的过程。
 
 **线程**：是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程共享进程的**堆**和**方法区**资源，但每个线程有自己的**程序计数器**、**虚拟机栈**和**本地方法栈**，所以系统在产生一个线程，或是在各个线程之间作切换工作时，负担要比进程小得多，也正因为如此，线程也被称为轻量级进程。
 
@@ -34,13 +34,9 @@
 
 
 
-
-
 ##### 线程间的等待通知
 
 等待 - 通知机制：线程首先获取互斥锁，当线程要求的条件不满足时，释放互斥锁，进入等待状态；当要求的条件满足时，通知等待的线程，重新获取互斥锁。
-
-
 
 
 
@@ -78,8 +74,6 @@
 
 
 
-
-
 #####性能问题
 
 使用锁可以解决安全性问题，但是过度的串行会导致严重的性能问题。根据阿姆达尔（Amdahl）定律，具体公式如下：S=1 / [ (1 − p) + p / n ] 。公式里的 n 可以理解为 CPU 的核数，p 可以理解为并行百分比，提升性能的极限取决于串行百分比【1-p】，如果假设串行度是5%，再假设 CPU 的核数（也就是 n）无穷大，那加速比 S 的极限就是 20倍。解决性能问题方式：使用无锁算法或者减小锁力度。
@@ -88,18 +82,11 @@
 
 
 
-##### Java线程实现原理
-
-
-
-
-
-
+#### (二). Java并发基础
 
 ##### Java线程API
 
 ```java
-
 -- Runnable接口
   核心接口: public abstract void run();
 
@@ -115,7 +102,7 @@
       private static int threadInitNumber; 
       private volatile int threadStatus = 0;
 
-      // 持有ThreadLocalMap
+      // 持有ThreadLocalMap【线程私有变量Map集合】
       ThreadLocal.ThreadLocalMap threadLocals = null;
 
       // park阻塞对象
@@ -146,7 +133,7 @@
       public static boolean interrupted(); // 标识当前线程中断，并清除中断标识
 
 
-      // 判断当前线程是否存活，线程结束后会notify对应等待线程
+      // 判断当前线程是否存活
       public final native boolean isAlive()
 
       // 静态方法
@@ -221,7 +208,6 @@
     // 设置obj对象偏移量offset对应的值为value
     public native void putLongVolatile(Object obj, long offset, long value);
 
-
     public native void putOrderedLong(Object obj, long offset, long value);
 
     // 获取obj对象中偏移量为offset的变量对应的volatile语义
@@ -243,10 +229,11 @@
 
 
 
--- LockSupport类
+-- LockSupport类【线程的等待唤醒机制】
   核心方法：
     // 等待阻塞挂起当前线程，可以指定指定时间和阻塞对象
     // 如果当前线程已经获取与LockSupport关联凭证，则不会阻塞调用。
+    // park方法对中断方法的响应和 sleep 有一些不太一样。它不会抛出中断异常，而是从park方法直接返回
     public static void park();
     public static void park(Object blocker);
     public static void parkNanos(Object blocker, long nanos);
@@ -261,18 +248,14 @@
 
 
 
-##### Java创建线程
+##### Java线程创建
 
 方式一：继承于Thread类
 
 ```java
 class PrintNum extends Thread{
-	public void run(){
-		for(int i = 1;i <= 100;i++){
-			if(i % 2 == 0){
-				System.out.println(Thread.currentThread().getName() + ":" + i);
-			}
-		}
+	public void run(){	
+		System.out.println(Thread.currentThread().getName());
 	}
 }
 ```
@@ -285,11 +268,7 @@ class PrintNum extends Thread{
 class SubThread implements Runnable{
 	public void run(){
 		//子线程执行的代码
-		for(int i = 1;i <= 100;i++){
-			if(i % 2 == 0){
-				System.out.println(Thread.currentThread().getName() + ":" + i);
-			}
-		}			
+		System.out.println(Thread.currentThread().getName() + ":" + i);	
 	}
 }
 ```
@@ -298,7 +277,6 @@ class SubThread implements Runnable{
 
 * 适合多个相同的程序代码的线程去处理同一个资源
 * 可以避免java中的单继承的限制
-* 增加程序的健壮性，代码可以被多个线程共享，代码和数据独立
 * 线程池只能放入实现Runable或callable类线程，不能直接放入继承Thread的类
 
 
@@ -329,33 +307,8 @@ public static void main(String[] args) throws Exception {
 
 
 
-
-
-##### Java线程状态
-
-线程状态说明：
-
-* 新建状态(New)：新创建了一个线程对象。
-
-* 就绪状态(Runnable)：线程对象创建后，其他线程调用了该对象的start()方法。该状态的线程位于可运行线程池中，变得可运行，等待获取CPU的使用权。
-
-* 运行状态(Running)：就绪状态的线程获取了CPU，执行程序代码。
-
-* 阻塞状态(Blocked)：阻塞状态是线程因为某种原因放弃CPU使用权，暂时停止运行。直到线程进入就绪状态，才有机会转到运行状态。阻塞的情况分三种：
-
-  > 等待阻塞：运行的线程执行wait()方法，JVM会把该线程放入等待池中。(wait会释放持有的锁)
-  > 同步阻塞：运行的线程在获取对象同步锁时，若同步锁被其他线程占用，JVM会把该线程放入锁池中。
-  > 其他阻塞：运行的线程执行sleep()或join()方法，或者发出了I/O请求时，JVM会把该线程置为阻塞状态。当sleep()状态超时、join()等待线程终止或者超时、或者I/O处理完毕时，线程重新转入就绪状态。
-
-* 死亡状态(Dead)：线程执行完了或者因异常退出了run()方法，该线程结束生命周期。
-
-
-
-线程调用阻塞式 API 时，是否会转换到 BLOCKED 状态呢？在操作系统层面，线程是会转换到休眠状态的，但是在 JVM 层面，Java 线程的状态不会发生变化，也就是说 Java 线程的状态会依然保持 RUNNABLE 状态。JVM 层面并不关心操作系统调度相关的状态，因为在 JVM 看来，等待 CPU 使用权（操作系统层面此时处于可执行状态）与等待 I/O（操作系统层面此时处于休眠状态）没有区别，都是在等待某个资源，所以都归入了 RUNNABLE 状态。
-
-![img](..\..\images\并发编程_线程状态图.png)
-
 ```java
+// JVM内部创建线程
 public class HelloWorld {
     public static void main(String[] args) {
         System.out.println("hello world");
@@ -387,13 +340,37 @@ public class HelloWorld {
 
 
 
+##### Java线程状态
+
+线程状态说明：
+
+* 新建状态【New】：新创建了一个线程对象。
+
+* 就绪状态【Runnable】：线程对象创建后，其他线程调用了该对象的start()方法。该状态的线程位于可运行线程池中，变得可运行，等待获取CPU的使用权。
+
+* 运行状态【Running】：就绪状态的线程获取了CPU，执行程序代码。
+
+* 阻塞状态(Blocked)：阻塞状态是线程因为某种原因放弃CPU使用权，暂时停止运行。直到线程进入就绪状态，才有机会转到运行状态。阻塞的情况分三种：
+
+  > 等待阻塞：运行的线程执行wait()方法，JVM会把该线程放入等待池中。【wait会释放持有的锁】
+  > 同步阻塞：运行的线程在获取对象同步锁时，若同步锁被其他线程占用，JVM会把该线程放入锁池中。
+  > 其他阻塞：运行的线程执行sleep()或join()方法，或者发出了I/O请求时，JVM会把该线程置为阻塞状态。当sleep()状态超时、join()等待线程终止或者超时、或者I/O处理完毕时，线程重新转入就绪状态。
+
+* 死亡状态(Dead)：线程执行完了或者因异常退出了run()方法，该线程结束生命周期。
+
+线程调用阻塞式 API 时，是否会转换到 BLOCKED 状态呢？在操作系统层面，线程是会转换到休眠状态的，但是在 JVM 层面，Java 线程的状态不会发生变化，也就是说 Java 线程的状态会依然保持 RUNNABLE 状态。JVM 层面并不关心操作系统调度相关的状态，因为在 JVM 看来，等待 CPU 使用权（操作系统层面此时处于可执行状态）与等待 I/O（操作系统层面此时处于休眠状态）没有区别，都是在等待某个资源，所以都归入了 RUNNABLE 状态。
+
+![img](..\..\images\并发编程_线程状态图.png)
+
+
+
+
+
 ##### Java内存模型
 
 导致可见性的原因是缓存，导致有序性的原因是编译优化，那解决可见性、有序性最直接的办法就是禁用缓存和编译优化，但是这样会带来性能问题。合理的方案应该是按需禁用缓存以及编译优化。
 
 Java 内存模型规范了 JVM 如何提供按需禁用缓存和编译优化的方法。具体来说，这些方法包括 volatile、synchronized 和 final 三个关键字，以及八项 Happens-Before 规则。
-
-
 
 **happens-before原则（先行发生原则）**：【前面的操作对于后续的操作是可见的】
 
@@ -412,76 +389,125 @@ Java 内存模型规范了 JVM 如何提供按需禁用缓存和编译优化的�
 
 
 
+#### (三). Java并发包基础
+
+##### 隐试锁【synchronized】
+
+Java语言内置的管程（synchronized）对 MESA 模型进行了精简。MESA 模型中，条件变量可以有多个，Java 语言内置的管程里只有一个条件变量。具体如下图所示。Java 内置的管程方案（synchronized）使用简单，synchronized 关键字修饰的代码块，在编译期会自动生成相关加锁和解锁的代码，但是仅支持一个条件变量。synchronized锁对象：修饰普通方法锁的是当前对象；修饰代码块锁的是当前对象；修饰静态方法锁类对象。
+
+<img src="../../images/java并发管程模型.png" alt="img" style="zoom:48%;" />
+
+**同步互斥：**多个线程同时需要操作共享变量V，为了保护多线程下访问变量的安全性，同时只能允许一个线程进行访问【获取锁】。其他线程将被放入等待队列，只有获取锁的线程释放锁资源，入口等待队列的线程才能获取锁资源。
+
+**等待-通知**：多线程同时操作共享变量V，获取锁的线程需要等待共享变量达到某个条件才能执行【比如生产消费模型中，生产者需要等待队列不能满，消费者需要等待队列不为空】。这个时候获取锁资源的线程需要释放锁资源，让其他线程获取锁资源并处理共享变量；当天件满足时候，需要将条件等待队列中的线程 加入到 入口等待线程。
+
+
+
+
+
+##### 抽象队列同步器AQS
+
+抽象的队列式的同步器【AQS】：定义了一套多线程访问共享资源的同步器框架，许多同步类实现都依赖于它，如常用的ReentrantLock/Semaphore/CountDownLatch。是构建并发包JUC的基石。
+
+![image-20201205150246028](../../images/AQS数据结构图.png)
+
+**同步器数据结构**：state[int类型] + 双向列表【Node队列】
+
 ```java
-public  static Unsafe UNSAFE;
-    static {
-        try {
-            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-            theUnsafe.setAccessible(true);
-            UNSAFE = (Unsafe) theUnsafe.get(null);
-        } catch (Exception e){
-            log.error("Init object unsafe error.", e);
-        }
-    }
+-- AbstractOwnableSynchronizer
+  核心属性：
+    // 独占线程
+    private transient Thread exclusiveOwnerThread;
 
-    public static Unsafe getUnsafe() {
-        return UNSAFE;
-    }
+  -- AbstractQueuedSynchronizer类
+    核心属性: 
+      // 状态信息
+      volatile int state;
+      
+      //头尾节点
+      transient volatile Node head,tail
 
-}
+
+    核心方法：
+      // 1. tryAcquire()尝试直接去获取资源, 如果获取成功直接返回
+      // 2. 没有获取到锁， 调用addWaiter将该线程加入等待队列的尾部[首个节点是哨兵节点]，并标记为独占模式；
+      // 3. acquireQueued(): 线程在等待队列中获取资源，获取不到线程会被阻塞，直到其他线程释放资源并调用unpark此线程后才返回继续运行。
+      // 如果在整个等待过程中被中断过，则返回true，否则返回false。
+      // 4. 如果线程在等待过程中被中断，它是不响应的。只是获取资源后才再进行自我中断selfInterrupt()，将中断补上。
+      public final void acquire(long arg)
+
+      // 调用tryRelease尝试释放资源，如果释放成功。调用unpark激活AQS等待队列被阻塞的线程。
+      public final boolean release(long arg)
+
+      // 调用tryAcquireShared获取共享资源，具体就是设置state状态，成功直接返回
+      // 如果失败了，就将当先线程封装成Node.SHARED的Node节点插入到AQS尾部，并使用LockSupport.part挂起自己
+      public final void acquireShared(long arg)
+
+      // 使用tryReleaseShared释放资源，主要就是增加state值。然后使用LockSupport.unpark激活AQS中被阻塞的一个线程
+      public final boolean releaseShared(long arg)
+
+
+    抽象方法：
+      // 线程是否正在独占资源。只有用到condition才需要去实现它。
+      isHeldExclusively()
+
+      // 独占方式。尝试获取/释放资源，成功则返回true，失败则返回false。
+      protected boolean tryAcquire(long arg)
+      protected boolean tryRelease(long arg)
+
+      // 共享方式。尝试获取资源，成功则返回true，失败则返回false。
+      protected long tryAcquireShared(long arg)
+      protected boolean tryReleaseShared(long arg)
+        
+
+-- Node内部类 ==> 双向链表，内部
+  核心属性：
+    // 等待状态： 0-默认 1-cancel -1-线程需要被唤醒
+    // -2-线程在条件队列等待 -3-释放共享资源需要通知其他节点
+    volatile int waitStatus;
+
+    // 前后节点
+    volatile Node prev, next;
+
+    // node中需要等待的线程
+    volatile Thread thread;
+
+    // 标识阻塞类型是获取共享还是独占资源
+    Node nextWaiter;
+
+  核心方法：
+    // 获取前一个Node
+    final Node predecessor()
+
+ 
+ -- Condition条件接口
+   核心接口：
+     // 加条件队列,并释放当前锁，然后阻塞当前线程
+     void await() throws InterruptedException;
+     boolean await(long time, TimeUnit unit) throws InterruptedException;
+     void awaitUninterruptibly();
+
+     // 将条件队列中1个节点或者全部节点移除，并放入AQS等待队列。最后在唤醒阻塞在await上面的线程
+     void signal();
+     void signalAll();
+
+   -- ConditionObject实现类
+     核心属性：
+       // 头结点和尾节点【单向列表】
+       private transient Node firstWaiter, lastWaiter;
+
+     核心方法：
+       // Node添加到条件队列
+       addConditionWaiter       
 ```
 
+获取共享资源和独占资源的区别：独占资源同时只能一个线程进入，其他线程进入等待队列。共享资源允许多个线程进入，只有获取获取共享资源失败的情况才会被放入等待队列。
 
 
 
 
-**2.synchognized关键字**
 
-
-
-修饰普通方法：锁当前对象
-
-修饰代码块：锁当前对象
-
-修饰静态方法：锁类对象
-
-
-
-**3.Lock/ReentrantLock显式锁**
-
- void lock(); 获得锁，如果锁同时被另一个线程拥有则发生阻塞
-
- void unlock(); 释放锁
-
- 使用方式：
-
-  lock.lock();
-
-  try {
-
-  finally {
-
-  	lock.unlock();
-
-  }
-
-
-
-**4.ReadWriteLock/ReentrantReadWriteLock读写锁**
-
-  Lock readLock();  //获取读锁
-
-  Lock writeLock();  //获取写锁
-
-ReadWriteLock 维护了一对相关的锁，一个用于只读操作，另一个用于写入操作。只要没有 writer，读取锁可以由多个 reader 线程同时保持。写入锁是独占的。
-
-ReadWriteLock 读取操作通常不会改变共享资源，但执行写入操作时，必须独占方式来获取锁。对于读取操作占多数的数据结构。 ReadWriteLock 能提供比独占锁更高的并发性。而对于只读的数据结构，其中包含的不变性可以完全不需要考虑加锁操作。
-
-  
-
-**5.CAS/Atomic乐观锁**
-
-volatile关键字特点：(内存可见性，不能保证原子性)保证了不同线程对这个变量进行操作时的可见性，即一个线程修改了某个变量的值，这新值对其他线程来说是立即可见的。禁止进行指令重排序。
+##### 原子变量和CAS
 
 CAS (Compare-And-Swap)： 是一种硬件对并发的支持，针对多处理器操作而设计的处理器中的一种特殊指令，用于管理对共享数据的并发访问。CAS 是一种无锁的非阻塞算法的实现。CAS 包含了 3 个操作数：
 
@@ -489,151 +515,18 @@ CAS (Compare-And-Swap)： 是一种硬件对并发的支持，针对多处理器
 * ii). 进行比较的值 A 
 * iii).当且仅当 V 的值等于 A 时， CAS 通过原子方式用新值 B 来更新 V 的值，否则不会执行任何操作。
 
-java.util.concurrent.atomic 包下提供了一些原子操作的常用类:
+```java
+do {
+  // 获取当前值，可以通过对象属性偏移量（性能好），也可以直接获取当前值
+  oldV = xxxx；
+  // 根据当前值计算新值
+  newV = ...oldV...
+}while(!compareAndSet(oldV,newV);
+```
 
-核心方法： boolean compareAndSet(expectedValue, updateValue)
 
-* AtomicBoolean 、 AtomicInteger 、 AtomicLong 、 AtomicReference
-* AtomicIntegerArray 、 AtomicLongArray
-* AtomicMarkableReference 
-* AtomicReferenceArray
-* AtomicStampedReference
 
-
-
-
-
-**6.ThreadLocal线程局部变量**
-
-
-
-  public T get() //得到这个线程当前值
-
-  public void set(T value) //为这个线程设置一个新值
-
-  public void remove() //删除对应这个线程值
-
-
-
-
-
-**死锁**：由于线程之间循环等待产生。
-
-
-
-
-
-
-
-
-
-#### (二). 并发基础包
-
-
-
-##### AQS和显示锁
-
-
-
-##### 显示条件
-
-
-
-##### 原子变量和CAS
-
-
-
-##### 
-
-
-
-
-
-
-
-#### (三). 并发容器
-
-##### CopyOnWriteArrayList
-
-
-
-
-
-
-
-##### ConcurrentHashMap
-
-
-
-
-
-##### ConcurrentSkipListMap
-
-
-
-
-
-##### ConcurrentLinkedQueue
-
-##### 
-
-
-
-
-
-#### 阻塞队列
-
-
-
-
-
-
-
-#### (四). 同步和协作工具类
-
-
-
-
-
-
-
-
-
-
-
-#### (五). 异步任务执行
-
-
-
-
-
-
-
-
-
-
-
-
-
-![img](..\..\images\ff8afc2561e8891bc74a0112905fed61.png)
-
-
-
-
-
-
-
-Callable + FutureTask + Future + Runnable
-
-Callable：可以返回结果和抛出受检异常
-
-Future可以实现：线程间通信。
-
-
-
-并发工具类
-
-
+volatile关键字特点：(内存可见性，不能保证原子性)保证了不同线程对这个变量进行操作时的可见性，即一个线程修改了某个变量的值，这新值对其他线程来说是立即可见的。禁止进行指令重排序。
 
 ```java
 // CAS原理 ==>UnSafe
@@ -663,105 +556,373 @@ public final int getAndAddInt(Object object, long offset, int step) {
 
 
 
+java.util.concurrent.atomic 包下提供了一些原子操作的常用类：
+
+* 原子化的基本数据类型： AtomicBoolean、AtomicInteger 和 AtomicLong。
+
+  ```java
+  getAndIncrement() // 原子化 i++
+  getAndDecrement() // 原子化的 i--
+  incrementAndGet() // 原子化的 ++i
+  decrementAndGet() // 原子化的 --i
+  // 当前值 +=delta，返回 += 前的值
+  getAndAdd(delta) 
+  // 当前值 +=delta，返回 += 后的值
+  addAndGet(delta)
+  //CAS 操作，返回是否成功
+  compareAndSet(expect, update)
+      
+  // 以下四个方法，新值可以通过传入 func 函数来计算
+  getAndUpdate(func)
+  updateAndGet(func)
+  getAndAccumulate(x,func)
+  accumulateAndGet(x,func)
+  ```
+
+  
+
+* 原子化的对象引用类型： AtomicReference、AtomicStampedReference 和 AtomicMarkableReference，利用它们可以实现对象引用的原子化更新。AtomicReference 提供的方法和原子化的基本数据类型差不多，对象引用的更新需要关注 ABA 问题，AtomicStampedReference 和 AtomicMarkableReference 这两个原子类可以解决 ABA 问题。AtomicStampedReference 实现的 CAS 方法就增加了版本号参数，方法签名如下：
+
+  ```java
+  boolean compareAndSet(
+    V expectedReference,
+    V newReference,
+    int expectedStamp,
+    int newStamp) 
+  ```
+
+* 原子化数组： AtomicIntegerArray、AtomicLongArray 和 AtomicReferenceArray，利用这些原子类，我们可以原子化地更新数组里面的每一个元素。
+
+* 原子化对象属性更新器：AtomicIntegerFieldUpdater、AtomicLongFieldUpdater 和 AtomicReferenceFieldUpdater，利用它们可以原子化地更新对象的属性，这三个方法都是利用反射机制实现的
+
+* 原子化的累加器：DoubleAccumulator、DoubleAdder、LongAccumulator 和 LongAdder，这四个类仅仅用来执行累加操作，相比原子化的基本数据类型，速度更快，但是不支持 compareAndSet() 方法。如果你仅仅需要累加操作，使用原子化的累加器性能会更好。【内部使用cell数组来解决单个变量之间的竞争问题】
 
 
 
 
-Atomic原子类
 
-原子化的基本数据类型： AtomicBoolean、AtomicInteger 和 AtomicLong，
+
+
+#### (四). 同步和协作工具类
+
+##### 可重入锁ReentrantLock
 
 ```java
-getAndIncrement() // 原子化 i++
-getAndDecrement() // 原子化的 i--
-incrementAndGet() // 原子化的 ++i
-decrementAndGet() // 原子化的 --i
-// 当前值 +=delta，返回 += 前的值
-getAndAdd(delta) 
-// 当前值 +=delta，返回 += 后的值
-addAndGet(delta)
-//CAS 操作，返回是否成功
-compareAndSet(expect, update)
-    
+// 常用API
+void lock();   // 获得锁，如果锁同时被另一个线程拥有则发生阻塞
+void lockInterruptibly() throws InterruptedException;
+boolean tryLock();
+boolean tryLock(long time, TimeUnit unit) throws InterruptedException;
 
-// 以下四个方法，新值可以通过传入 func 函数来计算
-getAndUpdate(func)
-updateAndGet(func)
-getAndAccumulate(x,func)
-accumulateAndGet(x,func)
+void unlock(); // 释放锁
+Condition newCondition(); // 获取锁条件
+
+
+// 基本使用姿势
+lock.lock();
+try {
+    // do something  
+}finally {
+    lock.unlock();
+}
+
+// 源码分析
+tryAcquire(): cas获取锁，如果获取成功直接返回true. 如果获取锁是当前线程，state + 1 【可重入的意思】，否则返回false.
+tryRelease(int releases): state的状态值和释放资源数一样，清空独占锁对象线程。返回true，否则返回false。
+
 ```
 
 
 
-原子化的对象引用类型： AtomicReference、AtomicStampedReference 和 AtomicMarkableReference，利用它们可以实现对象引用的原子化更新。AtomicReference 提供的方法和原子化的基本数据类型差不多，对象引用的更新需要关注 ABA 问题，AtomicStampedReference 和 AtomicMarkableReference 这两个原子类可以解决 ABA 问题。AtomicStampedReference 实现的 CAS 方法就增加了版本号参数，方法签名如下：
+
+
+##### 读写锁ReadWriteLock
 
 ```java
-boolean compareAndSet(
-  V expectedReference,
-  V newReference,
-  int expectedStamp,
-  int newStamp) 
+final ReadWriteLock rwl = new ReentrantReadWriteLock(); 
+
+// 读锁
+final Lock r = rwl.readLock(); 
+// 写锁 
+final Lock w = rwl.writeLock();
+
+```
+
+ReadWriteLock 维护了一对相关的锁，一个用于只读操作，另一个用于写入操作。只要没有 writer，读取锁可以由多个 reader 线程同时保持。写入锁是独占的。statez状态高16位记录是读锁， 低16位记录的是写锁。ReadWriteLock 读取操作通常不会改变共享资源，但执行写入操作时，必须独占方式来获取锁。对于读取操作占多数的数据结构。 ReadWriteLock 能提供比独占锁更高的并发性。需要注意的是，读写锁在锁升级的情况会导致死锁【读锁没有释放，然后获取写锁】。
+
+
+
+##### StampedLock锁
+
+ tampedLock 支持三种模式，分别是：写锁、悲观读锁和乐观读。其中，写锁、悲观读锁的语义和 ReadWriteLock 的写锁、读锁的语义非常类似，允许多个线程同时获取悲观读锁，但是只允许一个线程获取写锁，写锁和悲观读锁是互斥的。不同的是：StampedLock 里的写锁和悲观读锁加锁成功之后，都会返回一个 stamp；然后解锁的时候，需要传入这个 stamp。【类似于数据操作的乐观锁】
+
+StampedLock 读模板：
+
+```java
+final StampedLock sl =  new StampedLock();
+
+// 乐观读
+long stamp =  sl.tryOptimisticRead();
+// 读入方法局部变量
+
+// 校验stamp
+if (!sl.validate(stamp)){
+  // 升级为悲观读锁
+  stamp = sl.readLock();
+  try {
+    // 读入方法局部变量
+
+  } finally {
+    //释放悲观读锁
+    sl.unlockRead(stamp);
+  }
+}
+//使用方法局部变量执行业务操作
+
 ```
 
 
 
-原子化数组： AtomicIntegerArray、AtomicLongArray 和 AtomicReferenceArray，利用这些原子类，我们可以原子化地更新数组里面的每一个元素。
-
-原子化对象属性更新器：AtomicIntegerFieldUpdater、AtomicLongFieldUpdater 和 AtomicReferenceFieldUpdater，利用它们可以原子化地更新对象的属性，这三个方法都是利用反射机制实现的
-
-原子化的累加器：DoubleAccumulator、DoubleAdder、LongAccumulator 和 LongAdder，这四个类仅仅用来执行累加操作，相比原子化的基本数据类型，速度更快，但是不支持 compareAndSet() 方法。如果你仅仅需要累加操作，使用原子化的累加器性能会更好。
-
-
-
-通用写法：
+StampedLock 写模板：
 
 ```java
-do {
-  // 获取当前值，可以通过对象属性偏移量（性能好），也可以直接获取当前值
-  oldV = xxxx；
-  // 根据当前值计算新值
-  newV = ...oldV...
-}while(!compareAndSet(oldV,newV);
+long stamp = sl.writeLock();
+try {
+  // 写共享变量
+  
+} finally {
+  sl.unlockWrite(stamp);
+}
+
 ```
 
 
 
 
 
+#####信号量Semaphore
+
+```java
+// 从信号量获取一个或多个许可，如果无可用许可前将一直阻塞等待，
+void acquire() 
+void acquire(int permits) 
+
+// 从信号量尝试获取一个许可或者多个许可，如果无可用许可，直接返回false，不会阻塞
+boolean tryAcquire()
+boolean tryAcquire(int permits)
+boolean tryAcquire(int permits, long timeout, TimeUnit unit)
+  
+// 释放一个许可，别忘了在finally中使用，注意：多次调用该方法，会使信号量的许可数增加，达到动态扩展的效果，
+void release()
+  
+// 获取当前信号量可用的许可
+int availablePermits()
+ 
+  
+// 源码说明
+tryAcquireShared(int acquires) // cas方式获取共享资源state, 如果state>=acquires, 返回true，否则返回false
+tryReleaseShared(int releases) // cas方式增加 state= state + releases,然后返回成功
+  
+// 应用场景：并发限流
+ 
+```
 
 
 
 
-并发容器
+
+##### 闭锁CountDownLatch
+
+```java
+// 构造器，count就是AQS state对应的值
+public CountDownLatch(int count) 
+  
+// 释放资源，调用sync#releaseShared：状态state如果减到0，说明释放共享资源成功,并返回true.并唤醒AQS等待队列中一个线程
+public void countDown()
+ 
+// 调用sync#acquireSharedInterruptibly获取共享资源，如果资源state=0,tryAcquireShared返回true。
+// 否则，线程放入AQS等待队列
+public void await() throws InterruptedException
+public boolean await(long timeout, TimeUnit unit) throws InterruptedException
+  
+// 应用场景：一个线程等待多个线程的业务场景。
+
+```
+
+
+
+
+
+##### 回环屏障CyclicBarrier
+
+```java
+ -- CyclicBarrier
+  核心属性：
+    // 锁对象和条件变量
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition trip = lock.newCondition();
+
+    // 线程个数
+    private final int parties;
+
+    // 到达屏障点，执行的合并任务
+    private final Runnable barrierCommand;
+
+    // 记录屏障点是否被打破【某线程被中断后】
+    private Generation generation = new Generation();
+
+    // 初始值为parties，每调用一次await方法，则count减一，count=0标识所有线程都达到屏障点
+    private int count;
+
+  核心方法：
+
+    // 线程执行await方法，获取锁资源，count值减一。
+    // 如果count值大于0， 则进入条件等待队列【trip.await()】, 释放锁资源。
+    // 如果count值==0， 则执行合并任务barrierCommand，并唤醒条件队列进入等待执行队列执行。
+    public int await() throws InterruptedException, BrokenBarrierException
+
+
+
+
+// 应用场景: 一组线程互相等待，类似于几个驴友不离不弃【约定好多个汇合地点】；还有就是对账场景
+public static void main(String[] args) {
+
+     CyclicBarrier cyclicBarrier = new CyclicBarrier(2, () -> {
+         System.out.println("task merge...");
+     });
+ 
+     EXECUTOR_SERVICE.execute(() -> {
+         try {
+             int count = 0;
+             while (count <= 5) {
+                 System.out.println("task1-" + count + "...");
+                 cyclicBarrier.await();
+                 count++;
+             }
+         } catch (InterruptedException e) {
+             Thread.currentThread().interrupt();
+         } catch (BrokenBarrierException e) {
+             //
+         }
+     });
+ 
+     EXECUTOR_SERVICE.execute(() -> {
+         try {
+             int count = 0;
+             while (count <= 5) {
+                 System.out.println("task2-" + count + "...");
+                 cyclicBarrier.await();
+                 count++;
+             }
+         } catch (InterruptedException e) {
+             Thread.currentThread().interrupt();
+         } catch (BrokenBarrierException e) {
+             //
+         }
+     });
+     EXECUTOR_SERVICE.shutdown();
+ }
+```
+
+
+
+
+
+#### (五). Java并发容器类
 
 Java 中的容器主要可以分为四个大类，分别是 List、Map、Set 和 Queue，但并不是所有的 Java 容器都是线程安全的。例如，我们常用的 ArrayList、HashMap 就不是线程安全的。将非线程安全的容器变成线程安全的容器：
 
 * Java 提供的同步容器还有 Vector、Stack 和 HashTable
 * Collections工具类包装成同步类Collections#synchronizedList,#synchronizedSet,#synchronizedMap
-* java5后提供了并发容器
-* 并发容器，JUC
+* java5后提供了并发容器【JUC】
 
-![img](..\..\images\a20efe788caf4f07a4ad027639c80b1d.png)
+![img](..\..\images\并发容器分类.png)
 
-并发容器List：CopyOnWriteArrayList
+##### 并发容器List -CopyOnWriteArrayList
 
-![img](..\..\images\38739130ee9f34b821b5849f4f15e710.png)
+```java
+-- CopyOnWriteArrayList
+  核心属性：
+    final transient ReentrantLock lock = new ReentrantLock();
+    private transient volatile Object[] array;
 
-并发容器Set：
+  核心方法： 
+    // 增删改使用独占锁，保证数组操作的原子性。【使用写时复制，直接拷贝出新的数组】
+    public boolean add(E e)
+    public E set(int index, E element)
+    public E remove(int index)
+    public boolean addIfAbsent(E e) 
 
-CopyOnWriteArraySet （底层通过 CopyOnWriteArrayList 实现的。）
+    // CopyOnWriteArrayList的迭代或者查询都是使用弱一致性。都是用的是快照
+    public Iterator<E> iterator()
+    public int size() 
+    public boolean isEmpty()
+```
 
 
 
-并发容器Map
-
-Map 接口的两个实现是 ConcurrentHashMap 和 ConcurrentSkipListMap，它们从应用的角度来看，主要区别在ConcurrentHashMap 的 key 是无序的，而 ConcurrentSkipListMap 的 key 是有序的。所以如果你需要保证 key 的顺序，就只能使用 ConcurrentSkipListMap。
-
-ConcurrentHashMap源码分析。
 
 
+##### 并发容器Set - CopyOnWriteArraySet
 
-并发容器Queue
+```java
+-- CopyOnWriteArraySet
+
+  核心属性：
+     // 底层实现都是通过CopyOnWriteArrayList实现
+     private final CopyOnWriteArrayList<E> al;
+```
+
+
+
+
+
+##### 并发容器Map
+
+Map 接口的两个实现是 ConcurrentHashMap 和 ConcurrentSkipListMap，它们从应用的角度来看，主要区别在ConcurrentHashMap 的 key 是无序的，而 ConcurrentSkipListMap 的 key 是有序的。所以如果你需要保证 key 的顺序，只能使用ConcurrentSkipListMap。
+
+**ConcurrentHashMap 1.7**
+
+<img src="../../images/concurrentHashMap1.7.结构图.png" alt="img" style="zoom:60%;" />
+
+Java 7 中 ConcurrentHashMap 的存储结构如上图，ConcurrnetHashMap 由很多个 Segment 组合，而每一个 Segment 是一个类似于 HashMap 的结构，所以每一个 HashMap 的内部可以进行扩容。但是 Segment 的个数一旦**初始化就不能改变**，默认 Segment 的个数是 16 个， 也可认为ConcurrentHashMap 默认支持最多 16 个线程并发。
+
+
+
+**ConcurrentHashMap 1.8**
+
+<img src="../../images/concurrentHashMap1.8.结构图.png" alt="img" style="zoom:60%;" />
+
+
+
+ Java8 的 ConcurrentHashMap 相对于 Java7 来说变化比较大，不再是之前的 **Segment 数组 + HashEntry 数组 + 链表**，而是 **Node 数组 + 链表 / 红黑树**。当冲突链表达到一定长度时，链表会转换成红黑树。默认数组长度是16【2的n次幂】，负载因子0.75。
+
+
+
+**initTable初始化Node数组：**通过**自旋和 CAS** 操作完成的。里面需要注意的是变量 `sizeCtl` ，它的值决定着当前的初始化状态。
+
+* -1 说明正在初始化
+* -N 说明有N-1个线程正在进行扩容
+* 表示 table 初始化大小，如果 table 没有初始化
+* 表示 table 容量，如果 table　已经初始化。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### 并发容器Queue
 
 Java 并发包里面 Queue 这类并发容器是最复杂的，你可以从以下两个维度来分类。
 
@@ -772,16 +933,10 @@ Java 并发包里面 Queue 这类并发容器是最复杂的，你可以从以�
 
 * **单端阻塞队列：**其实现有 ArrayBlockingQueue、LinkedBlockingQueue、SynchronousQueue、LinkedTransferQueue、PriorityBlockingQueue 和 DelayQueue。内部一般会持有一个队列，这个队列可以是数组（其实现是 ArrayBlockingQueue）也可以是链表（其实现是 LinkedBlockingQueue）；甚至还可以不持有队列（其实现是 SynchronousQueue），此时生产者线程的入队操作必须等待消费者线程的出队操作。而 LinkedTransferQueue 融合 LinkedBlockingQueue 和 SynchronousQueue 的功能，性能比 LinkedBlockingQueue 更好；PriorityBlockingQueue 支持按照优先级出队；DelayQueue 支持延时出队。
 
-  > ![img](..\..\images\5974a10f5eb0646fa94f7ba505bfcf83.png)
-
 * **双端阻塞队列：**其实现是 LinkedBlockingDeque。
 
-  > ![img](..\..\images\1a58ff20f1271d899b93a4f9d54ce396.png)
-
-
-
-**单端非阻塞队列：**其实现是 ConcurrentLinkedQueue。
-**双端非阻塞队列：**其实现是 ConcurrentLinkedDeque。
+* **单端非阻塞队列：**其实现是 ConcurrentLinkedQueue。
+* **双端非阻塞队列：**其实现是 ConcurrentLinkedDeque。
 
 
 
@@ -792,6 +947,12 @@ ArrayBlockingQueue，LinkedBlockingQueue，SynchronousQueue源码需要分析下
 使用无界的队列容易导致 OOM。只有 ArrayBlockingQueue 和 LinkedBlockingQueue 是支持有界的，所以在使用其他无界队列时，一定要充分考虑是否存在导致 OOM 的隐患。
 
 
+
+
+
+
+
+#### (六). 线程池异步任务
 
 
 
@@ -876,11 +1037,6 @@ newWorkStealingPool(int parallelism)，这是一个经常被人忽略的线程�
 
 * 设置合适的线程池大小：线程数 = CPU 核数 × 目标 CPU 利用率 ×（1 + 平均等待时间 / 平均工作时间）
 
-* 尽量避免在使用线程池时操作 ThreadLocal
-
-
-
-
 
 
 
@@ -894,21 +1050,9 @@ newWorkStealingPool(int parallelism)，这是一个经常被人忽略的线程�
 
 
 
-定位cpu问题 ： cpu 100%  +   死锁    jstack pid ==> 可以打印死锁信息
-
-java线程问题定位
-
-1、使用top命令查看系统资源占用情况，发现Java进程占用大量CPU资源，PID为11572；
-
-2、显示进程详细列表命令：ps -mp 11572 -o THREAD,tid,time
-
-3、将TID转换成16进制：printf "%x\n" 12052
-
-4、打印堆栈信息：jstack 11572 |grep 2f14 -A 30
 
 
-
-并发设计模式：
+#### (七). 常见并发设计模式
 
 * 不可变性：对象一旦被创建之后，状态就不再发生变化【类和属性都是 final 的，所有方法均是只读的，类的属性如果是引用型,该属性对应的类也需要满足不可变类的条件】。所有的修改操作都创建一个新的不可变对象。可以利用享元模式可以减少创建对象的数量，从而减少内存占用。
 * 线程本地存储：本质上是一种避免共享的方案，由于没有共享，所以也就没有并发问题。【ThreadLocal】Spring 使用 ThreadLocal 来传递事务信息, 所以主线程事务管理器在异步线程中不会生效。
@@ -920,9 +1064,7 @@ java线程问题定位
 
 
 
-
-
-ThreadLocal原理
+##### ThreadLocal原理
 
 ```java
 -- ThreadLocal
@@ -952,4 +1094,10 @@ ThreadLocal原理
 ```
 
 在线程池中使用 ThreadLocal 可能导致内存泄露： 原在线程池中线程的存活时间太长，往往都是和程序同生共死的，这就意味着 Thread 持有的 ThreadLocalMap 一直都不会被回收，再加上 ThreadLocalMap 中的 Entry 对 ThreadLocal 是弱引用（WeakReference），所以只要 ThreadLocal 结束了自己的生命周期是可以被回收掉的。但是 Entry 中的 Value 却是被 Entry 强引用的，所以即便 Value 的生命周期结束了，Value 也是无法被回收的，从而导致内存泄露。
+
+
+
+
+
+##### 多线程版if
 
