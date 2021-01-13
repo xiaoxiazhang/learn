@@ -912,16 +912,6 @@ Java 7 中 ConcurrentHashMap 的存储结构如上图，ConcurrnetHashMap 由很
 
 
 
-
-
-
-
-
-
-
-
-
-
 ##### 并发容器Queue
 
 Java 并发包里面 Queue 这类并发容器是最复杂的，你可以从以下两个维度来分类。
@@ -940,11 +930,114 @@ Java 并发包里面 Queue 这类并发容器是最复杂的，你可以从以�
 
 
 
-BlockingAPI
+**单端阻塞队列：**
 
-ArrayBlockingQueue，LinkedBlockingQueue，SynchronousQueue源码需要分析下哦。
+```java
+-- BlockingQueue
+  核心接口：
+    // 从队尾插入数据，队列满了。等待非空条件
+    void put(E e) throws InterruptedException;
 
-使用无界的队列容易导致 OOM。只有 ArrayBlockingQueue 和 LinkedBlockingQueue 是支持有界的，所以在使用其他无界队列时，一定要充分考虑是否存在导致 OOM 的隐患。
+    // 从队尾插入数据，队列满了。则返回false
+    boolean offer(E e);
+   
+    // 从队尾插入数据，队列满了,报IllegalStateException异常
+    public boolean add(E e)
+
+    // 从队列首部出队一个元素，队列为空，等待非满条件
+    E take() throws InterruptedException;
+
+    // 从队列首部出队一个元素，队列为空，返回null
+    E poll();
+
+    // 从队列首部获取元素，如果队列为空，返回null
+    public E peek();
+ 
+  -- ArrayBlockingQueue
+    核心属性：
+      final Object[] items;  // 数据
+      int takeIndex, putIndex, count; // 获取和设置对应的位置和元素个数
+
+      // 锁和条件
+      final ReentrantLock lock;
+      private final Condition notEmpty, notFull;
+
+    核心方法实现原理：
+      通过全局锁对象实现只有一个线程进行入队和出队操作，size方法是精确的。
+
+
+  -- LinkedBlockingQueue
+    // Node节点： 是单向链表
+    核心属性：
+      private final AtomicInteger count = new AtomicInteger();
+      // 首尾节点
+      transient Node<E> head, last;
+       
+      // 出队锁和对应非空条件
+      private final ReentrantLock takeLock = new ReentrantLock();
+      private final Condition notEmpty = takeLock.newCondition();
+       
+      // 入队锁和对应非满条件
+      private final ReentrantLock putLock = new ReentrantLock();
+      private final Condition notFull = putLock.newCondition();
+      
+    核心方法实现原理：【入队和出队使用两把不一样的锁，减少锁力度】
+      入队操作：使用入队锁进行入队操作，并执行非空非满条件唤醒。
+      出队操作：使用出队锁进行出队操作，并执行非空非满条件唤醒。
+
+
+  -- PriorityBlockingQueue 
+    核心属性：
+      // 队列数据和长度
+      private transient Object[] queue;
+      private transient int size;
+      
+      // 排序比较器
+      private transient Comparator<? super E> comparator;
+      
+      // 入队和出队锁和非空条件【无界队列所以没有非满条件】
+      private final ReentrantLock lock;
+      private final Condition notEmpty;
+      
+      // 自旋锁标识扩容
+      private transient volatile int allocationSpinLock;
+
+    核心实现原理：
+       队列数据：使用二叉树堆维护元素的优先级，数组作为元素存储数据结构。
+       扩容：当前元素个数>=做大容量时候进行扩容【CAS算法】，扩容期间其他线程自旋。
+       出队入队：使用独占锁进行操作，保证线程安全性。出队顺序通过比较器保证。
+
+
+
+   -- DelayQueue
+     核心属性: 
+       // 优先级队列【根据延时时间排序】
+       private final PriorityQueue<E> q = new PriorityQueue<E>();
+
+       // 保证同时只能一个延时消息能被处理。【标识当前正在执行take的线程】
+       private Thread leader = null;
+      
+       // 入队和出队锁 和等待队列条件
+       private final transient ReentrantLock lock = new ReentrantLock();
+       private final Condition available = lock.newCondition();
+
+     核心方法原理：
+       入队：把延时消息放入优先级队列中【按照延时时间进行排序】
+       出队等待条件：队列为空, leader被其他线程占用, leader所在线程需要等待delay时间。 
+       出队成功：队列第一个延时消息的延迟时间已经到达。【执行完唤醒等待线程】
+```
+
+
+
+**单端非阻塞队列：**
+
+
+
+
+
+
+
+
 
 
 
@@ -954,39 +1047,106 @@ ArrayBlockingQueue，LinkedBlockingQueue，SynchronousQueue源码需要分析下
 
 #### (六). 线程池异步任务
 
+##### 线程池API
+
+```java
+-- Executors工具类
+  核心方法：
+    // 通常不要使用，使用了无界队列或者无限大小的最大线程数
+    public static ExecutorService newFixedThreadPool(int nThreads)
+    public static ExecutorService newCachedThreadPool()
+    public static ExecutorService newSingleThreadExecutor()
+    public static ScheduledExecutorService newScheduledThreadPool(int corePoolSize)
+
+
+-- Executor接口
+  核心接口：
+     void execute(Runnable command);
+
+  -- ExecutorService接口
+    核心接口：
+      <T> Future<T> submit(Callable<T> task);
+      <T> Future<T> submit(Runnable task, T result);
+      Future<?> submit(Runnable task);
+      void shutdown();
+      List<Runnable> shutdownNow();
+      boolean isShutdown();
+
+    -- AbstractExecutorService
+      核心接口：
+        protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value)
+        public Future<?> submit(Runnable task)
+        public <T> Future<T> submit(Callable<T> task)
+
+      -- ThreadPoolExecutor类
+        核心属性：
+          int corePoolSize  // 线程池中常驻核心线程数
+          int maximumPoolSize // 线程池中允许最大线程数
+          long keepAliveTime; // 线程池中非核心线程空闲保持时间
+          BlockingQueue<Runnable> workQueue; // 任务队列(阻塞队列)，被提交但尚未被执行的任务
+          ThreadFactory threadFactory; // 用于创建新线程
+          RejectedExecutionHandler handler; // 最大线程满了和任务队列也满了的拒绝策略
+
+        核心方法：
+          public void execute(Runnable command)
+
+          // 核心：拿出第一任务，并执行
+          final void runWorker(Worker w)
+          // 会等待阻塞队列中的任务执行完成。
+          public void shutdown()
+          // 不会等待阻塞队列中的任务
+          public List<Runnable> shutdownNow()
+
+    -- ScheduledThreadPoolExecutor
+      核心方法:  
+        // 构造方法
+        public ScheduledThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory)
+        public ScheduledThreadPoolExecutor(int corePoolSize, ThreadFactory threadFactory,
+                                       RejectedExecutionHandler handler)
+        // 一次性调度器
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit)
+        // 周期调度器【指定延时时间执行 - 不包含执行任务时间】
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit)        
+        // 周期调度器【指定延时时间执行 - 在上一个任务执行完成后开始计算】
+        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit)
+
+
+ -- RejectedExecutionHandler接口 ==> 拒绝策略
+   核心接口：  
+     void rejectedExecution(Runnable r, ThreadPoolExecutor executor);
+   
+   -- AbortPolicy ==> 直接抛出RejectedExecutionException异常【默认使用】
+   -- CallerRunsPolicy ==> 回退给调用线程执行（也就是主线程执行）
+   -- DiscardPolicy ==> 直接丢弃任务，代码是空代码块
+   -- DiscardOldestPolicy ==> 丢弃历史任务（poll），执行现有任务
+
+
+-- ScheduledFutureTask
+  核心属性: 
+    private long time;  // 执行任务的时间
+    private final long period; // 任务类型和延长时间：0：一次性 >0: 固定周期时间 <0: 任务执行完，固定时间 
+
+  核心方法：
+    // 执行任务的时间大小顺序排序
+    public int compareTo(Delayed other)
+
+
+-- DelayedWorkQueue ==> 延时队列
+  核心方法：
+    // 获取第一个任务【ScheduledFutureTask】，并等待对应delay时间
+    public RunnableScheduledFuture<?> take() 
+
+```
 
 
 
-线程池
-
-![1557588629879](..\..\images\1557588629879.png)
-
-![img](..\..\images\18b64aee22c67f488171a73133e4d465.png)
 
 
+##### 线程池执行流程
 
-ThreadPoolExecutor参数说明
+<img src="..\..\images\线程池执行流程图.png" alt="img" style="zoom:67%;" />
 
-corePoolSize：线程池中常驻核心线程数
-maximumPoolSize：线程池中允许最大线程数
-keepAliveTime：线程池中非核心线程空闲保持时间
-unit ：时间单位
-workQueue：任务队列(阻塞队列)，被提交但尚未被执行的任务
-threadFactory：用于创建新线程
-handler：最大线程满了和任务队列也满了的拒绝策略
-
-
-
-RejectedExecutionHandler拒绝策略
-
-- AbortPolicy：直接抛出RejectedExecutionException异常 ==> 默认使用
-- CallerRunsPolicy：回退给调用线程执行（也就是主线程执行）==> 核心业务使用
-- DiscardPolicy：直接丢弃任务，代码是空代码块
-- DiscardOldestPolicy：丢弃历史任务（poll），执行现有任务
-
-
-
-![img](..\..\images\c50ce5f2ff4ae723c6267185699ccda1.png)
+**执行步骤：**任务提交，如果线程数少于核心线程数则创建Worker线程进行任务处理；到达核心线程数后，还有任务提交则把任务加入到阻塞队列中；当阻塞队列中也满了，则创建最大线程数进行处理；最后如果已经是最大线程数且阻塞队列也满了则触发拒绝策略。
 
 ```java
 public void execute(Runnable command) {
@@ -1019,32 +1179,19 @@ public void execute(Runnable command) {
 
 
 
-Excutors线程池工具类
+##### 线程池状态流转
 
-newCachedThreadPool()，它是一种用来处理大量短时间工作任务的线程池，具有几个鲜明特点：它会试图缓存线程并重用，当无缓存线程可用时，就会创建新的工作线程；如果线程闲置的时间超过 60 秒，则被终止并移出缓存；长时间闲置时，这种线程池，不会消耗什么资源。其内部使用 SynchronousQueue 作为工作队列。
+<img src="..\..\images\线程池-状态流转图.png" alt="img" style="zoom:67%;" />
 
-newFixedThreadPool(int nThreads)，重用指定数目（nThreads）的线程，其背后使用的是无界的工作队列，任何时候最多有 nThreads 个工作线程是活动的。这意味着，如果任务数量超过了活动队列数目，将在工作队列中等待空闲线程出现；如果有工作线程退出，将会有新的工作线程被创建，以补足指定的数目 nThreads。
-
-newSingleThreadExecutor()，它的特点在于工作线程数目被限制为 1，操作一个无界的工作队列，所以它保证了所有任务的都是被顺序执行，最多会有一个任务处于活动状态，并且不允许使用者改动线程池实例，因此可以避免其改变线程数目。
-
-newSingleThreadScheduledExecutor() 和 newScheduledThreadPool(int corePoolSize)，创建的是个 ScheduledExecutorService，可以进行定时或周期性的工作调度，区别在于单一工作线程还是多个工作线程。
-
-newWorkStealingPool(int parallelism)，这是一个经常被人忽略的线程池，Java 8 才加入这个创建方法，其内部会构建ForkJoinPool，利用Work-Stealing算法，并行地处理任务，不保证处理顺序。
-
-
-
-注意：
-
-* 设置合适的线程池大小：线程数 = CPU 核数 × 目标 CPU 利用率 ×（1 + 平均等待时间 / 平均工作时间）
+线程池状态：Running(开始) ==> Shutdown(停止) ==> Tidying ==> Terminated(完结)
 
 
 
 
-终止线程池：
 
-* shutdown() ==> 会等待阻塞队列中的任务执行完成。
+##### 异步编排工具CompletableFuture
 
-* shutdownNow() ==> 不会等待阻塞队列中的任务。
+
 
 
 
@@ -1100,4 +1247,27 @@ newWorkStealingPool(int parallelism)，这是一个经常被人忽略的线程�
 
 
 ##### 多线程版if
+
+
+
+
+
+
+
+解码：42190-FDAA-5982-4599-1364
+
+
+
+复制这段内容后打开百度网盘手机App，操作更方便哦
+链接：https://pan.baidu.com/s/1V-wDTwiYvyGuPVodcEXAwg 提取码：jfq7
+
+http://www.360dhf.cn/dhfplayer.html
+
+vep视频需要指定播放器和账号/密码/网校名称，先下载视频再用播放器导入就可以在3个设备观看，学院：草根学院。
+
+
+
+
+
+
 
