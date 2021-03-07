@@ -123,6 +123,7 @@
       public synchronized void start()
 
       // 等待当前线程执行终止，并通过异常形式响应中断
+      // 当前线程进入等待状态【join的线程执行后才转换为可运行状态】
       public final void join() throws InterruptedException;
       public final synchronized void join(long millis) throws InterruptedException;
 
@@ -188,6 +189,7 @@
           public FutureTask(Runnable runnable, V result);
 
           // 执行callable对应call方法，将结果或者异常放入outcome属性,并唤起所有等待线程
+          // 会catch所有的异常，get的时候包装成ExecutionException抛出
           public void run();
 
           // 如果任务还没有执行完，将当前线程加入阻塞线程队列waiters【等待被唤醒】。
@@ -207,7 +209,6 @@
 
     // 设置obj对象偏移量offset对应的值为value
     public native void putLongVolatile(Object obj, long offset, long value);
-
     public native void putOrderedLong(Object obj, long offset, long value);
 
     // 获取obj对象中偏移量为offset的变量对应的volatile语义
@@ -1031,15 +1032,40 @@ Java 并发包里面 Queue 这类并发容器是最复杂的，你可以从以�
 
 **单端非阻塞队列：**
 
+```java
+// 应用场景，异步处理任务队列【无限队列，需要通过最大连接控制】==> Tomcat NioEndPoint
+-- ConcurrentLinkedQueue
+  核心属性：
+    // 首尾Node节点
+    private transient volatile Node<E> head, tail;private static class Node<E> {
+        volatile E item;
+        volatile Node<E> next;
+
+    // 单向链表
+    private static class Node<E> {
+        volatile E item;
+        volatile Node<E> next;
+    }
+
+  核心方法：
+    // cas方式队尾添加元素
+    public boolean offer(E e)
+
+    // cas方式队列首部添加元素
+    public E poll()
+
+    // 删除指定元素
+    public boolean remove(Object o)
+   
+    // cas获取队列首部添加元素
+    public E peek()
+    // 获取队列长度
+    public int size()
+    // 判断元素是否存在
+    public boolean contains(Object o)
 
 
-
-
-
-
-
-
-
+```
 
 
 
@@ -1240,32 +1266,13 @@ public void execute(Runnable command) {
 
 ```
 
-在线程池中使用 ThreadLocal 可能导致内存泄露： 原在线程池中线程的存活时间太长，往往都是和程序同生共死的，这就意味着 Thread 持有的 ThreadLocalMap 一直都不会被回收，再加上 ThreadLocalMap 中的 Entry 对 ThreadLocal 是弱引用（WeakReference），所以只要 ThreadLocal 结束了自己的生命周期是可以被回收掉的。但是 Entry 中的 Value 却是被 Entry 强引用的，所以即便 Value 的生命周期结束了，Value 也是无法被回收的，从而导致内存泄露。
+在线程池中使用 ThreadLocal 可能导致内存泄露： 在线程池中线程的存活时间太长，往往都是和程序同生共死的，这就意味着 Thread 持有的 ThreadLocalMap 一直都不会被回收，再加上 ThreadLocalMap 中的 Entry 对 ThreadLocal 是弱引用（WeakReference），所以只要 ThreadLocal 结束了自己的生命周期是可以被回收掉的。但是 Entry 中的 Value 却是被 Entry 强引用的，所以即便 Value 的生命周期结束了，Value 也是无法被回收的，从而导致内存泄露。
 
 
 
 
 
 ##### 多线程版if
-
-
-
-
-
-
-
-解码：42190-FDAA-5982-4599-1364
-
-
-
-复制这段内容后打开百度网盘手机App，操作更方便哦
-链接：https://pan.baidu.com/s/1V-wDTwiYvyGuPVodcEXAwg 提取码：jfq7
-
-http://www.360dhf.cn/dhfplayer.html
-
-vep视频需要指定播放器和账号/密码/网校名称，先下载视频再用播放器导入就可以在3个设备观看，学院：草根学院。
-
-
 
 
 

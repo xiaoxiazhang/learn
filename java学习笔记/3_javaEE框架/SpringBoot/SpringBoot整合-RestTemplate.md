@@ -109,12 +109,12 @@ public class HttpClientUtils {
     /**
      * ms毫秒,建立链接超时时间
      */
-    private static final int CONNECT_TIMEOUT = 5000;
+    private static final int CONNECT_TIMEOUT = 1000;
 
     /**
      * ms毫秒,读取超时时间
      */
-    private static final int SOCKET_TIMEOUT = 30000;
+    private static final int SOCKET_TIMEOUT = 10000;
 
     /**
      * 最大总并发
@@ -122,9 +122,9 @@ public class HttpClientUtils {
     private static final int MAX_TOTAL = 200;
 
     /**
-     * 每路并发
+     * 每路并发[每个域名并发最大个数]
      */
-    private static final int MAX_PER_ROUTE = 100;
+    private static final int MAX_PER_ROUTE = 10;
 
 
     private static CloseableHttpClient httpClient;

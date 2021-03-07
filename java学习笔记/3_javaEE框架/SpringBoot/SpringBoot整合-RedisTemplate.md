@@ -227,17 +227,12 @@ public class RedisTemplateConfig {
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory, StringSerializer stringSerializer) {
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
         RedisTemplate<String, Object> template = new RedisTemplate<String, Object>();
         template.setConnectionFactory(redisConnectionFactory);
         template.setKeySerializer(stringSerializer);
-        template.setValueSerializer(jackson2JsonRedisSerializer);
-        template.setHashKeySerializer(jackson2JsonRedisSerializer);
-        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        template.setValueSerializer(RedisSerializer.json());
+        template.setHashKeySerializer(RedisSerializer.string());
+        template.setHashValueSerializer(RedisSerializer.json());
         template.afterPropertiesSet();
         return template;
     }
@@ -538,23 +533,37 @@ try {
 
 #### (七). 缓存使用原则
 
-
-
-
-
 ##### 缓存读写策略
 
-CacheA
+CacheAside
 
 
 
 
 
-##### 缓存问题处理
 
 
 
-缓存穿透：是大量请求的 key 根本不存在于缓存中，导致请求直接到了数据库上，根本没有经过缓存这一层。
 
-缓存雪崩：缓存在同一时间大面积失效，后面的请求都直接落到了数据库上，造成数据库短时间内承受大量请求。
+##### 缓存常见问题
+
+**缓存雪崩**问题：缓存在同一时间大面积失效，后面的请求都直接落到了数据库上，造成数据库短时间内承受大量请求。
+
+* 分析问题：：一般来说，由于更新策略、或者数据热点、缓存服务宕机等原因，可能会导致缓存数据同 一个时间点大规模不可用，或者都更新。所以，需要我们的更新策略要在时间上合适，数据要均 匀分散，缓存服务器要多台高可用。
+
+* 解决办法：更新策略在时间上做到比较均匀【机上一个随机数】
+
+  
+
+**缓存穿透**问题：大量请求的 key 根本不存在于缓存中，导致请求直接到了数据库上，根本没有经过缓存这一层。
+
+* 解决办法： 缓存空值的KEY【时间比较短】；Bloom过滤或RoaringBitmap 判断KEY是否存在。
+
+
+
+**缓存击穿**问题：某个KEY失效的时候，正好有大量并发请求访问这个KEY。
+
+* 解决办法： KEY的更新操作添加全局互斥锁。
+
+
 
