@@ -114,6 +114,17 @@ protected Connection sendCommand(final Command cmd, final byte[]... args) {
 
 #### (三). Redis自动配置
 
+```java
+-- RedisAutoConfiguration  ==> 入口类
+  
+JedisConnectionConfiguration 
+RedisConnectionConfiguration 
+   属性：RedisProperties, RedisSentinelConfiguration, RedisSentinelConfiguration
+  
+RedisProperties ==> JedisConnectionFactory [包含连接]
+  
+```
+
 
 
 
@@ -139,7 +150,7 @@ public <T> T execute(RedisCallback<T> action, boolean exposeConnection, boolean 
 			// only bind resources in case of potential transaction synchronization
 			conn = RedisConnectionUtils.bindConnection(factory, enableTransactionSupport);
 		} else {
-		    //通过工厂获取连接。Jedis jedis = pool.getResource(); 通过jedis,pool封装创建JedisConnection
+		    // 通过工厂获取连接。Jedis jedis = pool.getResource(); 通过jedis,pool封装创建JedisConnection
 			conn = RedisConnectionUtils.getConnection(factory);
 		}
 	
@@ -535,11 +546,35 @@ try {
 
 ##### 缓存读写策略
 
-CacheAside
+**CacheAside模式：**【适用于读多写少场景】
+
+<img src="../../../images/缓存_cacheAside1.jpg" alt="img" style="zoom:40%;" />
+
+<img src="../../../images/缓存_cacheAside2.jpg" alt="img" style="zoom:38%;" />
+
+
+
+解决方式：延迟双删，读多写多的场景我们可以采用【写数据库 - 写缓存(异步binlog) ==> 需要保证原子性】
 
 
 
 
+
+**Read/Write Through（读穿 / 写穿）策略**：【需要缓存框架的支持，适合本地缓存】
+
+* Write Through 的策略：先查询要写入的数据在缓存中是否已经存在，如果已经存在，则更新缓存中的数据，并且由缓存组件同步更新到数据库中，如果缓存中数据不存在，我们把这种情况叫做“Write Miss（写失效）”。
+
+* Read Through 策略：先查询缓存中数据是否存在，如果存在则直接返回，如果不存在，则由缓存组件负责从数据库中同步加载数据。
+
+<img src="../../../images/缓存_readWriteThrough.jpg" alt="img" style="zoom:45%;" />
+
+
+
+
+
+**Write Back（写回）策略**：写入数据时只写入缓存，并且把缓存块儿标记为“脏”的。而脏块儿只有被再次使用时才会将其中的数据写入到后端存储中。操作系统层面的 Page Cache，日志的异步刷盘，大多采用了这种策略。
+
+<img src="../../../images/缓存_writeback.png" alt="image-20210428191425487" style="zoom:50%;" />
 
 
 
