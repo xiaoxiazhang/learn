@@ -62,6 +62,17 @@ trace com.ggj.platform.promotion.business.coupon.CouponRecommendBusiness * '#cos
 
 
 
+##### watch命令
+
+```shell
+# 插入接口调用情况
+watch org.apache.commons.lang3.StringUtils contains  {params,returnObj} 'params[1]=="Arthas"' -x 2
+```
+
+
+
+
+
 ##### JVM相关
 
 * **dashboard：**当前系统的实时数据面板，按 ctrl+c 退出
