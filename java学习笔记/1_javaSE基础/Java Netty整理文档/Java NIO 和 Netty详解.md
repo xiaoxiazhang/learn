@@ -973,3 +973,178 @@ l**TCP** **粘包和拆包解决方案**
 1-启动服务 2- 创建连接 3-接受数据 4-业务处理 5-发送数据 6-断开连接 7-关闭服务
 
 1)Netty 提供了 IdleStateHandler ，ReadTimeoutHandler，WriteTimeoutHandler 三个**Handler** 检测连接的有效性，重点分析 **IdleStateHandler** .
+
+
+
+
+
+
+
+
+
+
+
+```java
+
+
+-- AbstractBootstrap ==> Netty启动类
+  核心属性：
+    volatile EventLoopGroup group; // 主事件轮询组 
+    private volatile ChannelFactory<? extends C> channelFactory;
+    private volatile ChannelHandler handler;
+
+  -- Bootstrap ==> 客户端启动类
+
+  -- ServerBootstrap ==> 服务端启动类
+    核心属性：
+      private volatile EventLoopGroup childGroup;
+      private volatile ChannelHandler childHandler;
+      // tcp参数设置【ChannelOption包含tcp相关参数】
+      private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
+
+
+
+-- EventLoopGroup
+  核心接口：
+    EventLoop next();
+    ChannelFuture register(Channel channel)
+  -- AbstractEventExecutorGroup
+
+    -- MultithreadEventExecutorGroup
+      
+
+
+
+-- EventExecutor ==> 事件执行器
+
+  -- AbstractScheduledEventExecutor
+    核心属性：
+      private final Queue<Runnable> taskQueue;
+      private volatile Thread thread;
+      private final Executor executor;
+
+    -- SingleThreadEventLoop
+
+
+
+-- EventLoop接口 ==> 对应一个seletor[单个反应器]
+  -- SingleThreadEventExecutor
+
+    -- SingleThreadEventLoop
+
+      -- NioEventLoop
+        核心方法：
+          select ==> processSelectedKeys() ==> runAllTasks()
+
+
+ 
+
+-- ChannelFactory ==> 用于创建Channel对象使用，反射和工厂模式【NioServerSocketChannel, NioSocketChannel】
+
+
+
+
+-- ChannelHandler ==> 通道处理器
+  核心接口
+    void handlerAdded(ChannelHandlerContext ctx) throws Exception;
+    void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
+   
+   // 通道就绪事件
+     public void channelActive(ChannelHandlerContext ctx)throws Exception
+     public void channelInactive(ChannelHandlerContext ctx)throws Exception
+
+
+  -- ChannelInboundHandler 
+    核心接口：
+      channelRegistered, channelUnregistered, channelActive, channelInactive, channelRead, channelReadComplete, 
+      userEventTriggered, exceptionCaught
+
+    -- ChannelInboundHandlerAdapter 
+      实现方式：使用ChannelHandlerContext#对应方法实现
+
+
+  -- ChannelOutboundHandler
+    核心接口：bind, connect, close, read, write, flush
+
+    -- ChannelOutboundHandlerAdapter 
+      实现方式：使用ChannelHandlerContext#对应方法实现
+
+      -- ServerBootstrapAcceptor【处理accept事件，将SocketChannel注册到childGroup】
+
+  -- ChannelDuplexHandler 
+    实现方式：使用ChannelHandlerContext#对应方法实现
+
+
+
+
+-- ChannelHandlerContext ==> 通道处理器上下文【handler添加的时候创建的】
+  核心接口：extend【ChannelInboundInvoker, ChannelOutboundInvoker】
+    Channel channel();
+    EventExecutor executor();
+    ChannelHandler handler();
+    ChannelPipeline pipeline();
+
+  -- AbstractChannelHandlerContext
+    核心属性：// 双向链表结构
+      volatile AbstractChannelHandlerContext next;
+      volatile AbstractChannelHandlerContext prev;
+
+      private final DefaultChannelPipeline pipeline;
+      final EventExecutor executor;
+      private ChannelFuture succeededFuture;
+
+    核心方法：所有事件处理实现
+
+    -- DefaultChannelHandlerContext
+      核心属性： 
+        private final ChannelHandler handler;
+
+
+
+-- ChannelFuture
+  核心接口：extend Future 【isDone，isCancel, isSuccess】
+    ChannelFuture addListener(GenericFutureListener<? extends Future<? super Void>> listener);
+    ChannelFuture removeListener(GenericFutureListener<? extends Future<? super Void>> listener);
+    ChannelFuture sync() throws InterruptedException;
+  
+
+-- ChannelPipeline
+  核心接口：
+    ChannelPipeline addFirst(String name, ChannelHandler handler);
+    ChannelPipeline addLast(String name, ChannelHandler handler); // 倒数第一个
+  
+  -- DefaultChannelPipeline
+    核心属性：// 包含Handler执行链
+      final AbstractChannelHandlerContext head; // HeadContext节点
+      final AbstractChannelHandlerContext tail; // TailContext哨兵节点
+      private final Channel channel;
+      private Map<EventExecutorGroup, EventExecutor> childExecutors;
+
+    核心方法：
+      addFirst/addLast ==>创建ChannelHandlerContext对象【包含ChannalHandler节点】，并执行添加事件【handlerAdded】
+
+
+
+
+-- Channel接口
+  核心接口：
+     EventLoop eventLoop();
+     SocketAddress remoteAddress();
+
+  -- AbstractChannel
+    核心属性: 
+      // 构造器中会创建pipeline
+      private final DefaultChannelPipeline pipeline;
+      private volatile SocketAddress localAddress;
+      private volatile SocketAddress remoteAddress;
+      private volatile EventLoop eventLoop;
+
+    -- AbstractNioChannel
+      核心属性：selectionKey
+
+      -- NioSocketChannel ==> 创建NioSocketChannel的时候就会创建DefaultChannelPipeline
+      -- NioServerSocketChannel
+
+
+```
+
