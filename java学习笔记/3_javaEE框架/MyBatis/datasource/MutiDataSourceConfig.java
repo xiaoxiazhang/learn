@@ -42,11 +42,11 @@ public class MutiDataSourceConfig {
 
 
     @Bean
-    public DynamicDataSource dynamicDataSource(){
+    public DynamicDataSource dynamicDataSource() {
         DynamicDataSource dynamicDataSource = new DynamicDataSource();
         Map<Object, Object> targetDataSources = new HashMap<>();
-        targetDataSources.put(CoinConstants.COIN_WRITE,writeDataSource);
-        targetDataSources.put(CoinConstants.COIN_SLAVE,readDataSource);
+        targetDataSources.put(CoinConstants.COIN_WRITE, writeDataSource);
+        targetDataSources.put(CoinConstants.COIN_SLAVE, readDataSource);
         dynamicDataSource.setTargetDataSources(targetDataSources);
         dynamicDataSource.setDefaultTargetDataSource(writeDataSource);
         return dynamicDataSource;

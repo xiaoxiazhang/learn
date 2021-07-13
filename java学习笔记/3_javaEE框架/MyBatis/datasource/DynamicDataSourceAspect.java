@@ -28,7 +28,7 @@ public class DynamicDataSourceAspect {
         String datasourceName = targetDataSource.name();
         if (StringUtils.isEmpty(datasourceName)) {
             log.debug("use defaut datasource");
-        }else if (DataSourceEnum.getByName(datasourceName) == null) {
+        } else if (DataSourceEnum.getByName(datasourceName) == null) {
             String method = joinPoint.getSignature().getDeclaringTypeName() + "." + joinPoint.getSignature().getName();
             log.error("method==>{},datesource==>{} is not exists,system will use defaut data source。" + method, datasourceName);
         } else {

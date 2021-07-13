@@ -26,7 +26,7 @@ public class DataSourceConfig {
     private static final String MYSQL_SUFFIX = "?useUnicode=true&characterEncoding=UTF8&zeroDateTimeBehavior=convertToNull&autoReconnect=true&allowMultiQueries=true&tinyInt1isBit=false";
 
 
-    @Bean(name="writeDataSource",initMethod = "init")
+    @Bean(name = "writeDataSource", initMethod = "init")
     public DruidDataSource writeDataSource() {
         try (SecureDruidDataSource datasource = new SecureDruidDataSource()) {
             datasource.setUrl(druidDataSourceProperties.getWriteDbUrl() + MYSQL_SUFFIX);
@@ -39,7 +39,7 @@ public class DataSourceConfig {
         }
     }
 
-    @Bean(name="readDataSource",initMethod = "init")
+    @Bean(name = "readDataSource", initMethod = "init")
     public DruidDataSource readDataSource() {
         try (SecureDruidDataSource datasource = new SecureDruidDataSource()) {
             datasource.setUrl(druidDataSourceProperties.getReadDbUrl() + MYSQL_SUFFIX);
@@ -53,7 +53,7 @@ public class DataSourceConfig {
     }
 
 
-    private void commonConfig(DruidDataSource datasource)  {
+    private void commonConfig(DruidDataSource datasource) {
         //配置连接池的初始化大小，最大值，最小值
         datasource.setInitialSize(druidDataSourceProperties.getInitSize());
         datasource.setMaxActive(druidDataSourceProperties.getMaxActive());
@@ -81,14 +81,13 @@ public class DataSourceConfig {
         try {
             datasource.setFilters("stat");
         } catch (SQLException e) {
-            log.error("druid configuration initialization filter:",e);
+            log.error("druid configuration initialization filter:", e);
         }
         StatFilter statFilter = new StatFilter();
         statFilter.setSlowSqlMillis(50);
         statFilter.setLogSlowSql(true);
         datasource.setProxyFilters(Lists.newArrayList(statFilter));
     }
-
 
 
 }
